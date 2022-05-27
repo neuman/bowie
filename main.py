@@ -16,7 +16,9 @@ import copy
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # desired size of the output image
-imsize = 512 if torch.cuda.is_available() else 512  # use small size if no gpu
+imsize = 300 if torch.cuda.is_available() else 512  # use small size if no gpu
+
+
 
 loader = transforms.Compose([
     transforms.Resize(imsize),  # scale imported image
@@ -48,13 +50,22 @@ def imshow(tensor, title=None):
     if title is not None:
         plt.title(title)
     plt.pause(0.001) # pause a bit so that plots are updated
+    #plt.savefig("test.png", bbox_inches = "tight", pad_inches = 0.0)
+    #image.save(content_img.filename)
 
+def imsave(tensor, title=None):
+    image = tensor.cpu().clone()  # we clone the tensor to not do changes on it
+    image = image.squeeze(0)      # remove the fake batch dimension
+    image = unloader(image)
+    plt.pause(0.001) # pause a bit so that plots are updated
+    #plt.savefig("test.png", bbox_inches = "tight", pad_inches = 0.0)
+    image.save(title+".png")
 
-plt.figure()
-imshow(style_img, title='Style Image')
+#plt.figure()
+#imshow(style_img, title='Style Image')
 
-plt.figure()
-imshow(content_img, title='Content Image')
+#plt.figure()
+#imshow(content_img, title='Content Image')
 
 class ContentLoss(nn.Module):
 
@@ -182,8 +193,8 @@ input_img = content_img.clone()
 # input_img = torch.randn(content_img.data.size(), device=device)
 
 # add the original input image to the figure:
-plt.figure()
-imshow(input_img, title='Input Image')
+#plt.figure()
+#imshow(input_img, title='Input Image')
 
 def get_input_optimizer(input_img):
     # this line to show that input is a parameter that requires a gradient
@@ -250,11 +261,10 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,
 output = run_style_transfer(cnn, cnn_normalization_mean, cnn_normalization_std,
                             content_img, style_img, input_img)
 
-plt.figure()
-imshow(output, title='Output Image')
+#plt.figure()
+#imshow(output, title='Output Image')
+imsave(output, title='Whatever')
 
 # sphinx_gallery_thumbnail_number = 4
 plt.ioff()
 plt.show()
-
-#hello
