@@ -13,34 +13,42 @@ import torchvision.models as models
 
 import copy
 
+import os
+import datetime
+
+print("Initializing...")
+
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # desired size of the output image
-imsize = 300 if torch.cuda.is_available() else 512  # use small size if no gpu
+imsize = 800 if torch.cuda.is_available() else 512  # use small size if no gpu
 
-
+unloader = transforms.ToPILImage()  # reconvert into PIL image
 
 loader = transforms.Compose([
     transforms.Resize(imsize),  # scale imported image
     transforms.ToTensor()])  # transform it into a torch tensor
 
+output_path = "./output/"+datetime.datetime.now().strftime("%B-%d-%Y-%I-%M%p")+"/"
+try:
+    os.makedirs(output_path)
+except Exception as e:
+    print("Dir existed")
 
-def image_loader(image_name):
+
+def image_loader(image_name, size=None, max_pixel_count=None):
     image = Image.open(image_name)
+    #if max_pixel_count != None:
+        #pixel_count = image.width * image.height
+        #if pixel_count > max_pixel_count:
+            #ratio = max_pixel_count / pixel_count 
+            #image = image.resize((int(image.width*ratio), int(image.height*ratio)))
+    #image = image.resize((int(image.width*0.2), int(image.height*0.2)))
+    if size != None:
+        image = image.resize(size)
     # fake batch dimension required to fit network's input dimensions
     image = loader(image).unsqueeze(0)
     return image.to(device, torch.float)
-
-
-style_img = image_loader("./styles/dog.jpg")
-content_img = image_loader("./samples/ibis.jpg")
-
-assert style_img.size() == content_img.size(), \
-    "we need to import style and content images of the same size"
-
-unloader = transforms.ToPILImage()  # reconvert into PIL image
-
-plt.ion()
 
 def imshow(tensor, title=None):
     image = tensor.cpu().clone()  # we clone the tensor to not do changes on it
@@ -59,7 +67,7 @@ def imsave(tensor, title=None):
     image = unloader(image)
     plt.pause(0.001) # pause a bit so that plots are updated
     #plt.savefig("test.png", bbox_inches = "tight", pad_inches = 0.0)
-    image.save(title+".png")
+    image.save(title)
 
 #plt.figure()
 #imshow(style_img, title='Style Image')
@@ -188,7 +196,6 @@ def get_style_model_and_losses(cnn, normalization_mean, normalization_std,
 
     return model, style_losses, content_losses
 
-input_img = content_img.clone()
 # if you want to use white noise instead uncomment the below line:
 # input_img = torch.randn(content_img.data.size(), device=device)
 
@@ -258,12 +265,37 @@ def run_style_transfer(cnn, normalization_mean, normalization_std,
 
     return input_img
 
-output = run_style_transfer(cnn, cnn_normalization_mean, cnn_normalization_std,
-                            content_img, style_img, input_img)
+def transfer_style(style_path, content_path):
+    content_img = image_loader(content_path, max_pixel_count=(1168.00*1168.00))
+    sizing_img = image = Image.open(content_path)
+    style_img = image_loader(style_path, (sizing_img.width, sizing_img.height))
+    assert style_img.size() == content_img.size(), \
+        "we need to import style and content images of the same size"
 
-#plt.figure()
-#imshow(output, title='Output Image')
-imsave(output, title='Whatever')
+
+
+    plt.ion()
+    input_img = content_img.clone()
+    output = run_style_transfer(cnn, cnn_normalization_mean, cnn_normalization_std,
+                                content_img, style_img, input_img)
+
+    #plt.figure()
+    #imshow(output, title='Output Image')
+    imsave(output, title=output_path+os.path.splitext(os.path.basename(style_path))[0]+"_"+os.path.basename(content_path))
+
+ 
+# specify your path of directory
+styles_path = "./styles/3/"
+contents_path = "./samples/3/"
+contents_directories = os.listdir( contents_path )
+
+for content_path in contents_directories:
+    print("content: "+content_path)
+    styles_directories = os.listdir( styles_path )
+    for style_path in styles_directories:
+        print("    style: "+style_path)
+        print("        output: "+os.path.splitext(os.path.basename(styles_path+style_path))[0]+"_"+os.path.basename(contents_path+content_path))
+        transfer_style(styles_path+style_path, contents_path+content_path)
 
 # sphinx_gallery_thumbnail_number = 4
 plt.ioff()
